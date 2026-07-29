@@ -10,8 +10,8 @@ Bienvenido a la documentación oficial del diseño de base de datos relacional p
 3. [Justificación del Sistema](#3-justificación-del-sistema)
 4. [Justificación del Diseño](#4-justificación-del-diseño)
    - [Entidades Principales](#41-entidades-principales)
-   - [Inclusión de DETALLE_VENTA](#42-por-qué-se-creó-detalle_venta)
-   - [Relación Opcional en MANTENIMIENTO](#43-por-qué-mantenimiento-tiene-una-relación-opcional-con-cliente)
+   - [Uso e Importancia de `DETALLE_VENTA`](#42-uso-e-importancia-de-detalle_venta)
+   - [Uso e Importancia de `MANTENIMIENTO`](#43-uso-e-importancia-de-mantenimiento)
 5. [Restricciones y Validaciones](#5-restricciones-y-validaciones)
    - [Reglas de Negocio de la Aplicación](#51-regla-de-negocio-adicional)
 6. [Relaciones UML y Cardinalidad](#6-relaciones-uml)
@@ -64,13 +64,28 @@ El modelo fue estructurado identificando cada proceso de negocio (registro de au
 * **`VENTA`**: Encabezado de la transacción comercial (`fecha`, `total`, `método de pago`). Actúa como puente entre `CLIENTE` y `VENDEDOR`[cite: 1].
 * **`MANTENIMIENTO`**: Registra los servicios ejecutados sobre un vehículo (`tipo de servicio`, `costo`, `fecha`)[cite: 1].
 
-### 4.2 Por qué se creó `DETALLE_VENTA`
-Dado que una venta puede incluir múltiples vehículos y un vehículo puede estar en una venta, existe una relación **Muchos a Muchos (N:M)** entre `VENTA` y `VEHICULO`[cite: 1]. Como las columnas de una tabla relacional no deben almacenar valores multivaluados (1FN), se diseñó la tabla asociativa `DETALLE_VENTA`[cite: 1]:
-* **Llave Primaria Compuesta:** (`id_venta` + `id_vehiculo`)[cite: 1].
-* **Atributos Propios:** Almacena `precio_venta`, ya que el valor convenido depende de la combinación específica entre la transacción y la unidad vendida[cite: 1].
+---
 
-### 4.3 Por qué `MANTENIMIENTO` tiene una relación opcional con `CLIENTE`
-Los vehículos en stock pueden recibir acondicionamiento o mantenimiento preventivo antes de ser comercializados[cite: 1]. Por lo tanto, la clave foránea `id_cliente` dentro de la tabla `MANTENIMIENTO` se definió como **opcional (`NULL`)**, permitiendo registrar mantenimientos a unidades de inventario que aún pertenecen al concesionario[cite: 1].
+### 4.2 Uso e Importancia de `DETALLE_VENTA`
+
+La tabla **`DETALLE_VENTA`** es indispensable porque resuelve técnicamente la relación de tipo **Muchos a Muchos ($N:M$)** que existe entre `VENTA` y `VEHICULO`[cite: 1].
+
+* **Soporte de Ventas Múltiples:** Una misma venta/factura puede incluir más de un vehículo (por ejemplo, compras corporativas o de flotillas), y un modelo de vehículo a su vez está involucrado en transacciones comerciales[cite: 1].
+* **Cumplimiento de la 1FN (Primera Forma Normal):** En el modelo relacional no se pueden guardar listas de valores en una sola celda (como colocar múltiples `id_vehiculo` en `VENTA`)[cite: 1].
+* **Llave Primaria Compuesta:** Se define uniendo `(id_venta + id_vehiculo)`, garantizando que una combinación específica venta-vehículo no se duplique[cite: 1].
+* **Almacenamiento de `precio_venta`:** Este campo guarda el valor real acordado en la transacción. Debe residir en esta tabla intermedia porque el precio de venta final puede variar con respecto al `precio` de lista grabado en la ficha del `VEHICULO` (debido a descuentos o negociaciones puntuales)[cite: 1].
+
+---
+
+### 4.3 Uso e Importancia de `MANTENIMIENTO`
+
+La tabla **`MANTENIMIENTO`** desacopla y administra el historial de revisiones técnicas del vehículo sin saturar la entidad `VEHICULO` ni obligar a registrar un cliente de forma prematura[cite: 1].
+
+* **Soporte de Historial ($1:N$):** Un vehículo acumula múltiples servicios mecánicos (cambios de aceite, frenos, repuestos) a lo largo del tiempo[cite: 1]. Guardar estos datos en `VEHICULO` obligaría a duplicar filas del auto por cada visita al taller.
+* **Relación Opcional con `CLIENTE` (`id_cliente` es `NULL`able):**
+  * **Acondicionamiento Pre-Venta:** Si el vehículo está en inventario y pertenece al concesionario, recibe mantenimiento sin requerir un cliente asociado (`id_cliente = NULL`)[cite: 1].
+  * **Servicio Pos-Venta:** Cuando la unidad ya fue vendida y el comprador la ingresa al taller, se completa la clave foránea `id_cliente` asociándolo a la orden[cite: 1].
+* **Trazabilidad de Costos:** Facilita auditar los gastos de mantenimiento de cada unidad para calcular el margen de ganancia real antes y después de comercializarla.
 
 ---
 
